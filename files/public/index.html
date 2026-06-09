@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="theme-color" content="#0d0d0d"/>
+  <meta name="mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+  <title>Tennis Live — Análisis IA</title>
+  <link rel="manifest" href="manifest.json"/>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    :root{
+      --bg:#0a0a0a;--card:#141414;--card2:#1c1c1c;
+      --border:rgba(255,255,255,0.07);--text:#f0f0f0;
+      --dim:rgba(255,255,255,0.35);--dim2:rgba(255,255,255,0.1);
+      --live:#ff3b3b;--sched:#4a9eff;
+      --atp:#e8ff57;--wta:#ff6bba;--ch:#57d4ff;--acc:#e8ff57;
+    }
+    body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;
+      min-height:100dvh;padding-bottom:calc(70px + env(safe-area-inset-bottom,0px));}
+    .hdr{position:sticky;top:0;z-index:20;background:rgba(10,10,10,0.93);
+      backdrop-filter:blur(16px);border-bottom:1px solid var(--border);
+      padding:14px 18px 12px;display:flex;align-items:center;gap:12px;}
+    .hdr-logo{font-family:'Archivo Black',sans-serif;font-size:20px;letter-spacing:-0.5px;flex:1}
+    .hdr-logo span{color:var(--acc)}
+    .hdr-date{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:1px}
+    .refresh-btn{background:var(--card2);border:1px solid var(--border);border-radius:8px;
+      padding:7px 12px;color:var(--dim);font-family:'DM Mono',monospace;font-size:11px;
+      letter-spacing:1px;cursor:pointer;transition:all 0.2s;}
+    .refresh-btn:active{background:var(--acc);color:#000;border-color:var(--acc)}
+    .filters{display:flex;gap:8px;padding:14px 18px;overflow-x:auto;scrollbar-width:none;}
+    .filters::-webkit-scrollbar{display:none}
+    .pill{flex-shrink:0;padding:7px 16px;border-radius:20px;border:1px solid var(--border);
+      background:transparent;color:var(--dim);font-family:'DM Sans',sans-serif;
+      font-size:13px;font-weight:500;cursor:pointer;transition:all 0.18s;white-space:nowrap;}
+    .pill.active{background:var(--acc);color:#000;border-color:var(--acc);font-weight:600}
+    .pill.wta-pill.active{background:var(--wta);border-color:var(--wta);color:#fff}
+    .pill.ch-pill.active{background:var(--ch);border-color:var(--ch);color:#000}
+    .section-hdr{display:flex;align-items:center;gap:10px;padding:12px 18px 6px;}
+    .section-dot{width:7px;height:7px;border-radius:50%}
+    .section-title{font-family:'Archivo Black',sans-serif;font-size:12px;letter-spacing:2px;color:var(--dim)}
+    .section-count{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim2);margin-left:auto}
+    .match-card{margin:0 12px 10px;background:var(--card);border:1px solid var(--border);
+      border-radius:16px;overflow:hidden;animation:fadeUp 0.3s ease both;}
+    .match-card.live{border-color:rgba(255,59,59,0.25)}
+    .card-top{display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--border);}
+    .tour-badge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;
+      padding:3px 8px;border-radius:5px;font-weight:500;flex-shrink:0;}
+    .tour-name{font-size:11px;color:var(--dim);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .status-badge{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;
+      padding:3px 8px;border-radius:5px;flex-shrink:0;font-weight:600;}
+    .status-live{background:rgba(255,59,59,0.15);color:var(--live);border:1px solid rgba(255,59,59,0.3)}
+    .status-done{background:var(--dim2);color:var(--dim)}
+    .status-sched{background:rgba(74,158,255,0.1);color:var(--sched);border:1px solid rgba(74,158,255,0.2)}
+    .players{padding:14px 14px 10px;display:flex;flex-direction:column;gap:10px}
+    .player-row{display:flex;align-items:center;gap:8px}
+    .player-name{flex:1;font-size:15px;font-weight:600;letter-spacing:-0.3px}
+    .player-name.winner{color:var(--acc)}
+    .score-sets{display:flex;gap:5px}
+    .set-score{font-family:'DM Mono',monospace;font-size:15px;font-weight:500;width:22px;text-align:center;}
+    .set-score.won{color:var(--text)}.set-score.lost{color:var(--dim)}.set-score.current{color:var(--live)}
+    .sets-won{font-family:'Archivo Black',sans-serif;font-size:22px;width:28px;text-align:center;}
+    .sets-won.leader{color:var(--acc)}.sets-won.trailer{color:var(--dim)}
+    .proba-section{padding:2px 14px 14px;}
+    .proba-bar-wrap{height:7px;background:var(--dim2);border-radius:4px;overflow:hidden;display:flex;margin-bottom:7px;}
+    .proba-p1{height:100%;border-radius:4px 0 0 4px;transition:width 0.9s cubic-bezier(.4,0,.2,1)}
+    .proba-p2{height:100%;flex:1}
+    .proba-labels{display:flex;justify-content:space-between;align-items:center}
+    .proba-pct{font-family:'Archivo Black',sans-serif;font-size:16px;}
+    .proba-mid{font-size:9px;color:var(--dim);font-family:'DM Mono',monospace;letter-spacing:1px;text-align:center}
+    .proba-analyzing{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);
+      letter-spacing:1px;text-align:center;padding:8px 0 12px;}
+    .expand-btn{width:100%;padding:10px;background:var(--card2);border:none;
+      border-top:1px solid var(--border);color:var(--dim);
+      font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;cursor:pointer;}
+    .analysis-panel{display:none;padding:14px;border-top:1px solid var(--border);background:rgba(0,0,0,0.25);}
+    .analysis-panel.open{display:block}
+    .analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+    .analysis-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;}
+    .ai-factor{font-size:10px;color:var(--dim);letter-spacing:1px;margin-bottom:6px;font-weight:500}
+    .ai-bars{display:flex;gap:3px;margin-bottom:5px}
+    .ai-bar{flex:1;height:5px;border-radius:2px;background:var(--dim2);overflow:hidden;}
+    .ai-bar-fill{height:100%;border-radius:2px;transition:width 0.6s}
+    .ai-names{display:flex;justify-content:space-between;font-size:10px;color:var(--dim)}
+    .analysis-text{font-size:12px;color:rgba(255,255,255,0.5);line-height:1.65;
+      border-left:2px solid var(--acc);padding-left:10px;font-style:italic;}
+    .loading-overlay{position:fixed;inset:0;background:var(--bg);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;gap:16px;}
+    .loading-overlay.hidden{display:none}
+    .spinner{width:40px;height:40px;border:3px solid var(--dim2);
+      border-top-color:var(--acc);border-radius:50%;animation:spin 0.8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .loading-text{font-family:'DM Mono',monospace;font-size:12px;color:var(--dim);letter-spacing:2px}
+    .error-box{margin:20px 16px;background:rgba(255,59,59,0.08);border:1px solid rgba(255,59,59,0.2);
+      border-radius:12px;padding:20px;text-align:center;font-size:13px;color:var(--dim);line-height:1.7}
+    .empty{text-align:center;padding:50px 20px;color:var(--dim);font-size:14px;line-height:1.8}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,10,0.96);
+      backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;
+      padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));z-index:20;}
+    .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+      background:none;border:none;color:var(--dim);cursor:pointer;padding:4px;
+      transition:color 0.2s;font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:0.5px;}
+    .nav-item.active{color:var(--acc)}
+    .nav-icon{font-size:20px}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+    .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+      background:var(--live);animation:pulse 1.4s ease-in-out infinite;margin-right:4px;vertical-align:middle;}
+    .badge-atp{background:rgba(232,255,87,0.1);color:var(--atp);border:1px solid rgba(232,255,87,0.2)}
+    .badge-wta{background:rgba(255,107,186,0.1);color:var(--wta);border:1px solid rgba(255,107,186,0.2)}
+    .badge-ch{background:rgba(87,212,255,0.1);color:var(--ch);border:1px solid rgba(87,212,255,0.2)}
+    .badge-other{background:var(--dim2);color:var(--dim)}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">CARGANDO PARTIDOS...</div>
+</div>
+
+<div class="hdr">
+  <div class="hdr-logo">Tennis<span>Live</span></div>
+  <div class="hdr-date" id="hdr-date"></div>
+  <button class="refresh-btn" onclick="init()">↻</button>
+</div>
+
+<div class="filters">
+  <button class="pill active" onclick="setFilter('all',this)">🎾 Todos</button>
+  <button class="pill" onclick="setFilter('atp',this)">ATP</button>
+  <button class="pill wta-pill" onclick="setFilter('wta',this)">WTA</button>
+  <button class="pill ch-pill" onclick="setFilter('ch',this)">Challenger</button>
+  <button class="pill" onclick="setFilter('live',this)">🔴 En Vivo</button>
+  <button class="pill" onclick="setFilter('sched',this)">📅 Próximos</button>
+</div>
+
+<div id="content"></div>
+
+<div class="bottom-nav">
+  <button class="nav-item active" onclick="navTo('all',this)"><span class="nav-icon">🎾</span>Partidos</button>
+  <button class="nav-item" onclick="navTo('live',this)"><span class="nav-icon">🔴</span>En Vivo</button>
+  <button class="nav-item" onclick="navTo('ai',this)"><span class="nav-icon">⚡</span>Analizar Todo</button>
+</div>
+
+<script>
+// ── CONFIG: pon aquí tu URL de Vercel una vez desplegado ──
+const BACKEND_URL = "https://tennis-live-am7r.vercel.app";
+
+const FACTORS = ["Servicio","Agresividad","Consistencia","Físico","Mental","H2H/Sup."];
+let ALL_MATCHES = [];
+let filter = 'all';
+let analyses = {};
+let queue = [];
+let busy = false;
+
+function surfIcon(s){return s==='Hierba'?'🌿':s==='Tierra'?'🟤':'🔵'}
+function fmt(n){
+  const p=n.replace(/,\s*/,'|').split('|');
+  return p.length===2?p[1].trim()+' '+p[0].trim().toUpperCase():n;
+}
+function short(n){
+  const p=n.replace(/,\s*/,'|').split('|');
+  return p.length===2?p[1][0]+'. '+p[0].trim():n.split(' ')[0];
+}
+
+function filtered(){
+  if(filter==='all') return ALL_MATCHES;
+  if(filter==='live') return ALL_MATCHES.filter(m=>m.status==='in_progress');
+  if(filter==='sched') return ALL_MATCHES.filter(m=>m.status==='scheduled');
+  if(filter==='atp') return ALL_MATCHES.filter(m=>m.type==='atp');
+  if(filter==='wta') return ALL_MATCHES.filter(m=>m.type==='wta');
+  if(filter==='ch') return ALL_MATCHES.filter(m=>m.type==='ch');
+  return ALL_MATCHES;
+}
+
+function setFilter(f,btn){
+  filter=f;
+  document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  render();
+}
+function navTo(tab,btn){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  btn.classList.add('active');
+  if(tab==='live'){setFilter('live',document.querySelectorAll('.pill')[4])}
+  else if(tab==='ai'){setFilter('all',document.querySelectorAll('.pill')[0]);setTimeout(()=>filtered().filter(m=>m.status!=='final').forEach(m=>{if(!analyses[m.id])enqueue(m)}),100)}
+  else{setFilter('all',document.querySelectorAll('.pill')[0])}
+}
+
+function render(){
+  const ms=filtered();
+  const el=document.getElementById('content');
+  if(!ms.length){el.innerHTML='<div class="empty">No hay partidos para este filtro</div>';return;}
+  const live=ms.filter(m=>m.status==='in_progress');
+  const sched=ms.filter(m=>m.status==='scheduled');
+  const done=ms.filter(m=>m.status==='final');
+  let h='';
+  if(live.length){h+=sh('🔴 EN VIVO',live.length,'#ff3b3b');live.forEach((m,i)=>h+=card(m,i*60))}
+  if(sched.length){h+=sh('📅 PRÓXIMOS',sched.length,'#4a9eff');sched.forEach((m,i)=>h+=card(m,i*50))}
+  if(done.length){h+=sh('✓ FINALIZADOS',done.length,'rgba(255,255,255,0.25)');done.forEach((m,i)=>h+=card(m,i*30))}
+  el.innerHTML=h;
+  live.forEach(m=>{if(!analyses[m.id])enqueue(m)});
+  sched.slice(0,5).forEach(m=>{if(!analyses[m.id])enqueue(m)});
+}
+
+function sh(title,count,color){
+  return `<div class="section-hdr"><div class="section-dot" style="background:${color}"></div><div class="section-title">${title}</div><div class="section-count">${count}</div></div>`;
+}
+
+function card(m,delay){
+  const p1f=m.teams[0].name,p2f=m.teams[1].name;
+  const p1=fmt(p1f),p2=fmt(p2f),p1s=short(p1f),p2s=short(p2f);
+  const type=m.type||'atp';
+  const surf=m.surface||'Pista Dura';
+  const isLive=m.status==='in_progress',isDone=m.status==='final';
+  const c1=type==='wta'?'var(--wta)':'var(--atp)';
+  const badgeLabel=type==='wta'?'WTA':type==='ch'?'CHALLENGER':'ATP';
+  let sb=isLive?`<span class="status-badge status-live"><span class="live-dot"></span>LIVE</span>`:
+         isDone?`<span class="status-badge status-done">FIN</span>`:
+                `<span class="status-badge status-sched">HOY</span>`;
+  const s1=m.score?m.score[0]:null,s2=m.score?m.score[1]:null;
+  function setsH(pi){
+    return (m.sets||[]).map((set,si)=>{
+      const my=pi===0?set[0]:set[1],opp=pi===0?set[1]:set[0];
+      const cur=si===m.sets.length-1&&isLive;
+      return `<span class="set-score ${cur?'current':my>opp&&!cur?'won':'lost'}">${my}</span>`;
+    }).join('');
+  }
+  const p1win=isDone&&s1>s2,p2win=isDone&&s2>s1;
+  const a=analyses[m.id];
+  let probaH='';
+  if(a){
+    const pct1=a.pct1,pct2=100-pct1;
+    probaH=`<div class="proba-section">
+      <div class="proba-bar-wrap"><div class="proba-p1" style="width:${pct1}%;background:${c1}"></div><div class="proba-p2" style="background:var(--ch)"></div></div>
+      <div class="proba-labels"><span class="proba-pct" style="color:${c1}">${pct1}%</span><span class="proba-mid">VICTORIA</span><span class="proba-pct" style="color:var(--ch)">${pct2}%</span></div>
+    </div>`;
+  } else if(!isDone){
+    probaH=`<div class="proba-analyzing" id="pa-${m.id}">⏳ ANALIZANDO...</div>`;
+  }
+  let expandH='',panelH='';
+  if(a&&!isDone){
+    const fg=FACTORS.map((f,i)=>{
+      const v1=a.f1[i]||3,v2=a.f2[i]||3;
+      return `<div class="analysis-item"><div class="ai-factor">${f}</div><div class="ai-bars"><div class="ai-bar"><div class="ai-bar-fill" style="width:${v1*20}%;background:${c1}"></div></div><div class="ai-bar"><div class="ai-bar-fill" style="width:${v2*20}%;background:var(--ch)"></div></div></div><div class="ai-names"><span style="color:${c1}">${p1s} ${v1}/5</span><span style="color:var(--ch)">${p2s} ${v2}/5</span></div></div>`;
+    }).join('');
+    expandH=`<button class="expand-btn" onclick="toggle('${m.id}')">▼ ANÁLISIS DETALLADO</button>`;
+    panelH=`<div class="analysis-panel" id="ap-${m.id}"><div style="font-size:10px;letter-spacing:2px;color:var(--dim);margin-bottom:10px">${surfIcon(surf)} ${surf.toUpperCase()} — ANÁLISIS IA</div><div class="analysis-grid">${fg}</div><div class="analysis-text">${a.razon}</div></div>`;
+  }
+  const tourClean=m.tournament.replace(/ATP |WTA |Men Singles|Women Singles/g,'').trim();
+  return `<div class="match-card ${isLive?'live':''}" style="animation-delay:${delay}ms" id="card-${m.id}">
+    <div class="card-top"><span class="tour-badge badge-${type}">${badgeLabel}</span><span class="tour-name">${surfIcon(surf)} ${tourClean}</span>${sb}</div>
+    <div class="players">
+      <div class="player-row"><span class="player-name ${p1win?'winner':''}">${p1}</span><div class="score-sets">${setsH(0)}</div><span class="sets-won ${s1!==null&&s1>=s2?'leader':'trailer'}">${s1!==null?s1:''}</span></div>
+      <div class="player-row"><span class="player-name ${p2win?'winner':''}">${p2}</span><div class="score-sets">${setsH(1)}</div><span class="sets-won ${s2!==null&&s2>=s1?'leader':'trailer'}">${s2!==null?s2:''}</span></div>
+    </div>
+    ${probaH}${expandH}${panelH}
+  </div>`;
+}
+
+function toggle(id){
+  const p=document.getElementById('ap-'+id),b=p&&p.previousElementSibling;
+  if(!p)return;
+  p.classList.toggle('open');
+  if(b)b.textContent=p.classList.contains('open')?'▲ OCULTAR':'▼ ANÁLISIS DETALLADO';
+}
+
+function enqueue(m){
+  if(analyses[m.id]||queue.find(q=>q.id===m.id))return;
+  queue.push(m);if(!busy)drain();
+}
+async function drain(){
+  if(!queue.length){busy=false;return;}
+  busy=true;const m=queue.shift();await analyze(m);setTimeout(drain,400);
+}
+async function analyze(m){
+  const p1=m.teams[0].name,p2=m.teams[1].name,surf=m.surface||'Pista Dura',type=m.type||'atp';
+  const circuit=type==='wta'?'WTA':type==='ch'?'ATP Challenger':'ATP';
+  let ctx='';
+  if(m.score){const sets=(m.sets||[]).map(s=>s[0]+'-'+s[1]).join(', ');ctx=`Marcador: ${p1} ${m.score[0]}-${m.score[1]} ${p2}. Sets: ${sets}.`;}
+  const prompt=`Experto en ${circuit}. Analiza: ${p1} vs ${p2} en ${surf} (${m.tournament}). ${ctx}
+Considera ranking, forma reciente, adecuación a ${surf}, H2H.
+Responde SOLO JSON puro sin backticks:
+{"pct1":X,"f1":[s,a,c,f,m,h],"f2":[s,a,c,f,m,h],"razon":"max 2 frases sobre el favorito y por qué en ${surf}"}
+pct1=% victoria ${p1}. Arrays=[Servicio,Agresividad,Consistencia,Físico,Mental,H2H/Sup] del 1-5.`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:350,messages:[{role:'user',content:prompt}]})});
+    const d=await r.json();
+    const txt=d.content.map(i=>i.text||'').join('').replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(txt);
+    analyses[m.id]={pct1:parsed.pct1,f1:parsed.f1||[3,3,3,3,3,3],f2:parsed.f2||[3,3,3,3,3,3],razon:parsed.razon};
+    patchCard(m);
+  }catch(e){console.error(p1,'vs',p2,e);}
+}
+
+function patchCard(m){
+  const pa=document.getElementById('pa-'+m.id),cardEl=document.getElementById('card-'+m.id);
+  if(!cardEl)return;
+  const a=analyses[m.id],type=m.type||'atp',surf=m.surface||'Pista Dura';
+  const c1=type==='wta'?'var(--wta)':'var(--atp)';
+  const pct1=a.pct1,pct2=100-pct1;
+  const p1s=short(m.teams[0].name),p2s=short(m.teams[1].name);
+  if(pa){
+    const div=document.createElement('div');div.className='proba-section';
+    div.innerHTML=`<div class="proba-bar-wrap"><div class="proba-p1" style="width:0%;background:${c1}"></div><div class="proba-p2" style="background:var(--ch)"></div></div><div class="proba-labels"><span class="proba-pct" style="color:${c1}">${pct1}%</span><span class="proba-mid">VICTORIA</span><span class="proba-pct" style="color:var(--ch)">${pct2}%</span></div>`;
+    pa.replaceWith(div);setTimeout(()=>{const bar=div.querySelector('.proba-p1');if(bar)bar.style.width=pct1+'%'},50);
+  }
+  if(m.status!=='final'){
+    const fg=FACTORS.map((f,i)=>{const v1=a.f1[i]||3,v2=a.f2[i]||3;
+      return `<div class="analysis-item"><div class="ai-factor">${f}</div><div class="ai-bars"><div class="ai-bar"><div class="ai-bar-fill" style="width:${v1*20}%;background:${c1}"></div></div><div class="ai-bar"><div class="ai-bar-fill" style="width:${v2*20}%;background:var(--ch)"></div></div></div><div class="ai-names"><span style="color:${c1}">${p1s} ${v1}/5</span><span style="color:var(--ch)">${p2s} ${v2}/5</span></div></div>`;
+    }).join('');
+    const btn=document.createElement('button');btn.className='expand-btn';btn.textContent='▼ ANÁLISIS DETALLADO';btn.onclick=()=>toggle(m.id);
+    const panel=document.createElement('div');panel.className='analysis-panel';panel.id='ap-'+m.id;
+    panel.innerHTML=`<div style="font-size:10px;letter-spacing:2px;color:var(--dim);margin-bottom:10px">${surfIcon(surf)} ${surf.toUpperCase()} — ANÁLISIS IA</div><div class="analysis-grid">${fg}</div><div class="analysis-text">${a.razon}</div>`;
+    cardEl.appendChild(btn);cardEl.appendChild(panel);
+  }
+}
+
+async function init(){
+  document.getElementById('loading').classList.remove('hidden');
+  document.getElementById('loading-text').textContent='CARGANDO PARTIDOS...';
+  const now=new Date();
+  document.getElementById('hdr-date').textContent=now.toLocaleDateString('es-ES',{weekday:'short',day:'numeric',month:'short'}).toUpperCase();
+  try{
+    const res=await fetch(`${BACKEND_URL}/api/matches`);
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    ALL_MATCHES=data.matches||[];
+    document.getElementById('loading').classList.add('hidden');
+    render();
+  }catch(err){
+    document.getElementById('loading').classList.add('hidden');
+    document.getElementById('content').innerHTML=`<div class="error-box">
+      ❌ No se pudo cargar los partidos<br/><br/>
+      <small>Asegúrate de que el backend está desplegado en Vercel<br/>y que BACKEND_URL está configurado correctamente.</small><br/><br/>
+      <button onclick="init()" style="background:var(--acc);color:#000;border:none;padding:8px 20px;border-radius:8px;font-weight:600;cursor:pointer">Reintentar</button>
+    </div>`;
+  }
+}
+
+if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+init();
+</script>
+</body>
+</html>
