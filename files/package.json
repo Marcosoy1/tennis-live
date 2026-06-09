@@ -1,0 +1,12 @@
+{
+  "name": "tennis-live-backend",
+  "version": "1.0.0",
+  "description": "Backend para Tennis Live PWA",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}

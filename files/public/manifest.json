@@ -1,0 +1,14 @@
+{
+  "name": "Tennis Live — Análisis IA",
+  "short_name": "TennisLive",
+  "description": "Partidos ATP, WTA y Challenger con análisis de IA",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#e8ff57",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
